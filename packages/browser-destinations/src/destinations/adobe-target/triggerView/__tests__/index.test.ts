@@ -5,21 +5,18 @@ import { Subscription } from '../../../../lib/browser-destinations'
 // TODO: Write real tests for page()
 
 describe('Adobe Target Web', () => {
-  describe('#identify', () => {
-    test('calls identify and simulates a login flow', async () => {
+  describe('#page', () => {
+    test('tracks a view with the page() parameters', async () => {
       const subscriptions: Subscription[] = [
         {
-          partnerAction: 'upsertProfile',
-          name: 'Upsert Profile',
+          partnerAction: 'triggerView',
+          name: 'Trigger View',
           enabled: true,
-          subscribe: 'type = "identify"',
+          subscribe: 'type = "page"',
           mapping: {
-            anonymousId: {
-              '@path': '$.anonymousId'
-            },
-            userId: {
-              '@path': '$.userId'
-            },
+            viewName: { '@path': '$.name' },
+            pageParameters: { '@path': '$.properties' },
+            sendNotification: true,
             traits: {
               '@path': '$.traits'
             }
@@ -35,10 +32,12 @@ describe('Adobe Target Web', () => {
         mbox_name: 'target-global-mbox'
       }
 
-      const identifyParams = {
-        traits: {
-          favorite_color: 'blue',
-          location: {
+      const pageParams = {
+        name: 'The Test Suite',
+        properties: {
+          language: 'ES',
+          currency: 'MXN',
+          region: {
             country_code: 'MX',
             state: 'Mich'
           }
@@ -52,77 +51,38 @@ describe('Adobe Target Web', () => {
 
       jest.spyOn(destination, 'initialize')
 
-      destination.actions.upsertProfile.perform = jest.fn(destination.actions.upsertProfile.perform)
+      destination.actions.triggerView.perform = jest.fn(destination.actions.triggerView.perform)
 
       await event.load(Context.system(), {} as Analytics)
       expect(destination.initialize).toHaveBeenCalled()
 
-      await event.identify?.(
+      await event.page?.(
         new Context({
-          anonymousId: 'random-id-42',
-          type: 'identify',
-          ...identifyParams
+          type: 'page',
+          ...pageParams
         })
       )
 
-      expect(destination.actions.upsertProfile.perform).toHaveBeenCalledWith(
+      expect(destination.actions.triggerView.perform).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
           payload: {
-            anonymousId: 'random-id-42',
-            traits: {
-              favorite_color: 'blue',
-              location: {
-                country_code: 'MX',
-                state: 'Mich'
-              }
-            }
+            viewName: 'The Test Suite',
+            pageParameters: {
+              currency: 'MXN',
+              language: 'ES',
+              region: { country_code: 'MX', state: 'Mich' }
+            },
+            sendNotification: true
           }
         })
       )
 
       expect(window.pageParams).toEqual({
-        profile: {
-          mbox3rdpartyid: 'random-id-42',
-          favorite_color: 'blue',
-          location: {
-            country_code: 'MX',
-            state: 'Mich'
-          }
-        }
-      })
-
-      await event.identify?.(
-        new Context({
-          userId: 'The-Real-ID',
-          anonymousId: 'random-id-42',
-          type: 'identify',
-          ...identifyParams
-        })
-      )
-
-      expect(destination.actions.upsertProfile.perform).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({
-          payload: {
-            userId: 'The-Real-ID',
-            anonymousId: 'random-id-42',
-            traits: {
-              favorite_color: 'blue',
-              location: {
-                country_code: 'MX',
-                state: 'Mich'
-              }
-            }
-          }
-        })
-      )
-
-      expect(window.pageParams).toEqual({
-        profile: {
-          mbox3rdpartyid: 'The-Real-ID',
-          favorite_color: 'blue',
-          location: {
+        page: {
+          language: 'ES',
+          currency: 'MXN',
+          region: {
             country_code: 'MX',
             state: 'Mich'
           }

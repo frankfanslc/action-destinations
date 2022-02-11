@@ -46,6 +46,7 @@ const action: BrowserActionDefinition<Settings, Adobe, Payload> = {
     */
     setPageParams({ page: { ...pageParams } })
 
+    console.log(pageName)
     Adobe.target.triggerView(pageName, { page: sendNotification })
   }
 }
